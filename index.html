@@ -3,108 +3,97 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reproductor de Archivos de Drive</title>
+  <title>Audios</title>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f4f7f6;
-      color: #333;
-      margin: 0;
-      padding: 40px 20px;
-      display: flex;
-      justify-content: center;
+      font-family: sans-serif;
+      max-width: 700px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #202124;
     }
-    .container {
-      width: 100%;
-      max-width: 600px;
-      background: #ffffff;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
     }
-    h2 {
-      color: #2c3e50;
-      margin-top: 0;
-      border-bottom: 2px solid #eaeaea;
-      padding-bottom: 10px;
-    }
-    #estado-carga {
-      font-style: italic;
-      color: #666;
-      padding: 15px 0;
-    }
-    #lista-audios {
+    ul {
       list-style: none;
       padding: 0;
-      margin: 0;
     }
-    /* Estilos para los elementos que inyectará el script */
-    #lista-audios li {
-      background: #fafafa;
-      margin: 10px 0;
-      padding: 12px 15px;
-      border-left: 4px solid #1db954;
-      border-radius: 4px;
-      transition: transform 0.2s, background 0.2s;
+    li {
+      margin-bottom: 0.6rem;
+      padding: 0.6rem 0.8rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
     }
-    #lista-audios li:hover {
-      background: #f1f1f1;
-      transform: translateX(4px);
-    }
-    #lista-audios a {
-      color: #1db954;
+    a {
+      color: #1a73e8;
       text-decoration: none;
-      font-weight: 600;
-      display: block;
     }
-    #lista-audios a:hover {
+    a:hover {
       text-decoration: underline;
+    }
+    .mensaje {
+      color: #5f6368;
+      font-style: italic;
+    }
+    .error {
+      color: #c5221f;
     }
   </style>
 </head>
 <body>
-
-  <div class="container">
-    <h2>Archivos de Audio Disponibles</h2>
-    
-    <!-- Bloque exclusivo para mostrar resultados -->
-    <div id="contenedor-audios-drive">
-      <div id="estado-carga">Cargando archivos desde Google Drive...</div>
-      <ul id="lista-audios"></ul>
-    </div>
-  </div>
-
-  <!-- Script de invocación asíncrona -->
+  <h1>Archivos de audio</h1>
+  <ul id="lista">
+    <li class="mensaje">Cargando...</li>
+  </ul>
+ 
   <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      // Reemplaza con tus datos reales aquí:
-      const folderId = "13D2UIdSrkHPImbrZSG7n1NWY3Ip7f14G"; 
-      const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwBS3K60rUeAv0a4_3_yN3aZVLHkisioFzRMvCmwVwuLn-mnzMuggidSJuyiYPvm197/exec";
-      
-      // Construcción de la URL final usando folderId
-      const urlInvocacion = `${URL_APPS_SCRIPT}?id=${folderId}`;
-      
-      const listaAudios = document.getElementById("lista-audios");
-      const estadoCarga = document.getElementById("estado-carga");
-
-      // Llamada asíncrona al Google Apps Script
-      fetch(urlInvocacion)
-        .then(response => {
-          if (!response.ok) throw new Error("Error al conectar con el servidor.");
-          return response.text();
+    // Reemplazar por la URL de tu Apps Script (terminada en /exec)
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxDwWxHonXmmr2V6htOH1OjKstRvMaDpFCb6Orm7lrMRByvHiJ8e0Fn1RUpavnzGBE3/exec";
+ 
+    const params = new URLSearchParams(window.location.search);
+    const folderId = params.get("folderId");
+ 
+    const lista = document.getElementById("lista");
+ 
+    function mostrarMensaje(texto, esError = false) {
+      lista.innerHTML = `<li class="mensaje${esError ? ' error' : ''}">${texto}</li>`;
+    }
+ 
+    if (!folderId) {
+      mostrarMensaje("Falta especificar el parámetro folderId en la URL. Ejemplo: ?folderId=ID_DE_LA_CARPETA", true);
+    } else {
+      fetch(`${SCRIPT_URL}?folderId=${encodeURIComponent(folderId)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            mostrarMensaje(data.error, true);
+            return;
+          }
+ 
+          if (!data.files || data.files.length === 0) {
+            mostrarMensaje("No se encontraron archivos .mp3 o .wav en esta carpeta.");
+            return;
+          }
+ 
+          lista.innerHTML = "";
+          data.files.forEach(f => {
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+            a.href = `https://drive.google.com/file/d/${f.id}/view`;
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            a.textContent = f.name;
+            li.appendChild(a);
+            lista.appendChild(li);
+          });
         })
-        .then(htmlResultado => {
-          // Ocultamos el mensaje de carga e inyectamos los elementos de la lista
-          estadoCarga.style.display = "none";
-          listaAudios.innerHTML = htmlResultado;
-        })
-        .catch(error => {
-          console.error("Error detectado:", error);
-          estadoCarga.style.color = "#e74c3c";
-          estadoCarga.innerHTML = "No se pudieron cargar los archivos. Verifica el folderId y los permisos de la carpeta.";
+        .catch(err => {
+          console.error("Error:", err);
+          mostrarMensaje("Ocurrió un error al cargar los archivos. Intentá recargar la página.", true);
         });
-    });
+    }
   </script>
-
 </body>
 </html>
