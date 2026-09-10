@@ -1,1 +1,106 @@
 # pruebas
+
+index.html  (audiosbandas/PRUEBAS)
+
+ARCHIVOS DE AUDIO
+
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audios</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 700px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #202124;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      margin-bottom: 0.6rem;
+      padding: 0.6rem 0.8rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+    }
+    a {
+      color: #1a73e8;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .mensaje {
+      color: #5f6368;
+      font-style: italic;
+    }
+    .error {
+      color: #c5221f;
+    }
+  </style>
+</head>
+<body>
+  <h1>Archivos de audio</h1>
+  <ul id="lista">
+    <li class="mensaje">Cargando...</li>
+  </ul>
+ 
+  <script>
+    // Reemplazar por la URL de tu Apps Script (terminada en /exec)
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzjGvypOF81CUU5_gI4T_iiY-Otn3pH60A_JEsvdykRtidnubTHsO0rThUfTJwEsRST/exec";
+ 
+    const params = new URLSearchParams(window.location.search);
+    const folderId = params.get("folderId");
+ 
+    const lista = document.getElementById("lista");
+ 
+    function mostrarMensaje(texto, esError = false) {
+      lista.innerHTML = `<li class="mensaje${esError ? ' error' : ''}">${texto}</li>`;
+    }
+ 
+    if (!folderId) {
+      mostrarMensaje("Falta especificar el parámetro folderId en la URL. Ejemplo: ?folderId=ID_DE_LA_CARPETA", true);
+    } else {
+      fetch(`${SCRIPT_URL}?folderId=${encodeURIComponent(folderId)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            mostrarMensaje(data.error, true);
+            return;
+          }
+ 
+          if (!data.files || data.files.length === 0) {
+            mostrarMensaje("No se encontraron archivos .mp3 o .wav en esta carpeta.");
+            return;
+          }
+ 
+          lista.innerHTML = "";
+          data.files.forEach(f => {
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+            a.href = `https://drive.google.com/file/d/${f.id}/view`;
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            a.textContent = f.name;
+            li.appendChild(a);
+            lista.appendChild(li);
+          });
+        })
+        .catch(err => {
+          console.error("Error:", err);
+          mostrarMensaje("Ocurrió un error al cargar los archivos. Intentá recargar la página.", true);
+        });
+    }
+  </script>
+</body>
+</html>
